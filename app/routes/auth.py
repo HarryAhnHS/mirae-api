@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Request, HTTPException
 from app.schemas.auth import UserProfile
 from app.services.supabase import supabase
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import jwt
 import os
 
@@ -16,11 +16,11 @@ def login(profile: UserProfile):
     user_id = profile.id
     existing = supabase.table("educators").select("*").eq("id", user_id).execute()
     if not existing.data:
-        supabase.table("educators").insert(profile.dict()).execute()
+        supabase.table("educators").insert(profile.model_dump()).execute()
     
     # Return a JWT token (valid for 1 hour)
     token = jwt.encode(
-        {"sub": user_id, "exp": datetime.utcnow() + timedelta(hours=1)},
+        {"sub": user_id, "exp": datetime.now(timezone.utc) + timedelta(hours=1)},
         JWT_SECRET,
         algorithm=JWT_ALGORITHM
     )
