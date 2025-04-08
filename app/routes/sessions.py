@@ -1,31 +1,42 @@
-# app/routes/sessions.py
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, Depends
 from app.services.llm import transcribe_audio, summarize_note
+from app.dependencies.auth import user_supabase_client
 from datetime import datetime, timezone
 import uuid
-from app.services.supabase import supabase
 
 router = APIRouter()
 
+# -------- Transcription Endpoint --------
+
 @router.post("/transcribe")
-async def transcribe(audio: UploadFile = File(...)):
+async def transcribe(
+    audio: UploadFile = File(...),
+    context=Depends(user_supabase_client)
+):
     audio_bytes = await audio.read()
     transcription = await transcribe_audio(audio_bytes)
     return {"raw_text": transcription}
+
+
+# -------- Summarize + Log Endpoint --------
 
 @router.post("/summarize_and_log")
 async def summarize_and_log(
     raw_text: str = Form(...),
     objective_id: str = Form(...),
     prompt: str = Form(""),
+    context=Depends(user_supabase_client)
 ):
-    # 1. Fetch previous context if needed
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    # Optional: fetch previous logs for context (not implemented yet)
     previous_logs = []
 
-    # 2. Call LLM
+    # Summarize using LLM
     summary_data = await summarize_note(raw_text, prompt, previous_logs)
 
-    # 3. Store in Supabase
+    # Create session record
     new_session = {
         "id": str(uuid.uuid4()),
         "objective_id": objective_id,
@@ -40,4 +51,3 @@ async def summarize_and_log(
     supabase.table("sessions").insert(new_session).execute()
 
     return summary_data
-

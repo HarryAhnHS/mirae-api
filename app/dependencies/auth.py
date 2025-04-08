@@ -1,7 +1,7 @@
 # app/dependencies/auth.py
 # decode the JWT token and return the logged user's supabase client
 
-from fastapi import Depends, HTTPException, Request
+from fastapi import HTTPException, Request
 import jwt
 from supabase import create_client
 import os
@@ -9,7 +9,7 @@ import os
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
 
-def user_supabase_client(request: Request):
+async def user_supabase_client(request: Request):
     token = request.headers.get("Authorization", "").replace("Bearer ", "")
     if not token:
         raise HTTPException(status_code=401, detail="Missing token")
