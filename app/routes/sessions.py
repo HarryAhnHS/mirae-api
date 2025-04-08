@@ -67,20 +67,27 @@ def log(
     return {"status": "success", "session_id": new_session["id"]}
 
 # -------- Get All Sessions from logged in user --------
-
 @router.get("/")
 async def get_all_sessions(context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
 
-    # Join sessions → objectives → goals → subject_areas
-    # Also join sessions → students directly
     response = supabase \
         .from_("sessions") \
-        .select("""...""") \
+        .select("""
+            *,
+            student:students (
+                id, name, grade_level, disability_type
+            ),
+            objective:objectives (
+                id, description, current_progress, weekly_frequency,
+                subject_area:subject_areas (
+                    id, name
+                )
+            )
+        """) \
         .eq("teacher_id", user_id) \
         .order("created_at", desc=True) \
         .execute()
 
-    sessions = response.data
-    return sessions
+    return response.data

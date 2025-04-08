@@ -9,7 +9,7 @@ class Session(BaseModel):
     student_id: str
     objective_id: str
     raw_input: str
-    llm_summary: Optional[str] = None
+    llm_summary: str
     progress_delta: int
     notes: Optional[str] = None
     date: Optional[datetime] = None
