@@ -26,10 +26,10 @@ async def analyze_session(prompt: str) -> Dict[str, Any]:
         # Parse as JSON
         parsed = json.loads(content)
 
-        if "summary" not in parsed or "progressDelta" not in parsed:
+        if "summary" not in parsed or "progress_delta" not in parsed:
             raise ValueError("Missing keys in Gemini output")
 
-        parsed["progressDelta"] = max(-100, min(100, int(parsed["progressDelta"])))
+        parsed["progress_delta"] = max(-100, min(100, int(parsed["progress_delta"])))
         return parsed
 
     except json.JSONDecodeError:
@@ -38,5 +38,5 @@ async def analyze_session(prompt: str) -> Dict[str, Any]:
         print("Gemini summarization error:", e)
         return {
             "summary": "Summary unavailable due to formatting error.",
-            "progressDelta": 0
+            "progress_delta": 0
         }

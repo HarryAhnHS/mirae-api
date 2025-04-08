@@ -33,7 +33,7 @@ async def analyze(
     {raw_text}
 
     Please generate a summary of the session and estimate the progress made across the objectives above. 
-    Return only a JSON with keys: "summary" (string) and "progressDelta" (integer between -100 and 100 denoting percentage progress).
+    Return only a JSON with keys: "summary" (string) and "progress_delta" (integer between -100 and 100 denoting percentage progress towards final objective).
     """
 
     # Call your LLM
