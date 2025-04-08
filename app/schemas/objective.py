@@ -31,7 +31,4 @@ class CreateObjective(BaseModel):
     student_id: str
     subject_area_id: str
     description: str
-    progress_type: Optional[str] = "general"
-    current_progress: Optional[int] = 0
-    weekly_frequency: Optional[int] = None
 

@@ -1,22 +1,10 @@
 from fastapi import APIRouter, UploadFile, File, Form, Depends, HTTPException
-from app.services.llm import transcribe_audio, summarize_note
+from app.services.llm import summarize_note
 from app.dependencies.auth import user_supabase_client
 from datetime import datetime, timezone
 import uuid
 
 router = APIRouter()
-
-# -------- Transcription Endpoint --------
-
-@router.post("/transcribe")
-async def transcribe(
-    audio: UploadFile = File(...),
-    context=Depends(user_supabase_client)
-):
-    audio_bytes = await audio.read()
-    transcription = await transcribe_audio(audio_bytes)
-    return {"raw_text": transcription}
-
 
 # -------- Summarize + Log Endpoint --------
 

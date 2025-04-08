@@ -26,7 +26,7 @@ def get_all_students(context=Depends(user_supabase_client)):
 
     response = supabase \
         .table("students") \
-        .select("*") \
+        .select("*, objectives(*)") \
         .eq("teacher_id", user_id) \
         .order("updated_at", desc=True) \
         .execute()

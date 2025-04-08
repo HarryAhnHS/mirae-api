@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.objective import Objective, SubjectArea, CreateSubjectArea
+from app.schemas.objective import Objective, SubjectArea, CreateSubjectArea, CreateObjective
 from app.dependencies.auth import user_supabase_client
 
 router = APIRouter()
@@ -46,7 +46,7 @@ def delete_subject_area(id: str, context=Depends(user_supabase_client)):
 # -------- Objectives --------
 
 @router.post("/objective")
-def create_objective(obj: Objective, context=Depends(user_supabase_client)):
+def create_objective(obj: CreateObjective, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
     
