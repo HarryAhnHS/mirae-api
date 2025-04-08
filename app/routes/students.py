@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.student import Student, StudentCreate
 from app.dependencies.auth import user_supabase_client
 
-router = APIRouter()
+router = APIRouter(trailing_slash=False)
 
 @router.post("/")
 def create_student(student: StudentCreate, context=Depends(user_supabase_client)):

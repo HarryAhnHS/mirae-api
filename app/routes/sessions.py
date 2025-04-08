@@ -6,7 +6,7 @@ from typing import List, Dict
 from app.schemas.session import SessionCreate     
 import uuid
 
-router = APIRouter()
+router = APIRouter(trailing_slash=False)
 
 # -------- Summarize + Log Endpoint --------
 

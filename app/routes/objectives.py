@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from app.schemas.objective import Objective, SubjectArea, CreateSubjectArea, CreateObjective
 from app.dependencies.auth import user_supabase_client
 
-router = APIRouter()
+router = APIRouter(trailing_slash=False)
 
 # -------- Subject Areas --------
 
