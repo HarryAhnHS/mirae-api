@@ -1,27 +1,29 @@
-# app/dependencies/auth.py
-# decode the JWT token and return the logged user's supabase client
-
-from fastapi import HTTPException, Request
-import jwt
+from fastapi import Depends, Header, HTTPException
 from supabase import create_client
 import os
 
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET")
+async def user_supabase_client(authorization: str = Header(...)):
+    if not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Invalid token format")
 
-async def user_supabase_client(request: Request):
-    token = request.headers.get("Authorization", "").replace("Bearer ", "")
-    if not token:
-        raise HTTPException(status_code=401, detail="Missing token")
+    token = authorization.split(" ")[1]
+
+    supabase = create_client(
+        os.getenv("SUPABASE_URL"),
+        os.getenv("SUPABASE_KEY")
+    )
 
     try:
-        payload = jwt.decode(token, SUPABASE_JWT_SECRET, algorithms=["HS256"])
-        user_id = payload["sub"]
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except Exception:
+        user_res = supabase.auth.get_user(token)
+    except Exception as e:
+        print("Supabase token validation error:", e)
         raise HTTPException(status_code=401, detail="Invalid Supabase token")
 
-    # Create a user-scoped Supabase client
-    supabase = create_client(SUPABASE_URL, token)
-    return {"supabase": supabase, "user_id": user_id}
+    if not user_res.user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return {
+        "supabase": supabase,
+        "user_id": user_res.user.id,
+        "user": user_res.user,
+    }

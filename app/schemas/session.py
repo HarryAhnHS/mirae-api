@@ -2,8 +2,11 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import datetime
 
+# --- Sessions ---
 class Session(BaseModel):
     id: Optional[str] = None
+    teacher_id: str
+    student_id: str
     objective_id: str
     raw_input: str
     llm_summary: Optional[str] = None

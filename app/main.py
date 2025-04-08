@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import auth, students, objectives, sessions
+from app.routes import students, objectives, sessions
 from dotenv import load_dotenv
 import os
 
