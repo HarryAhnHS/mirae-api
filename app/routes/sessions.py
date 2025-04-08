@@ -18,7 +18,7 @@ async def analyze(
 ):
     # Build dynamic system prompt
     objective_summaries = "\n".join(
-        [f"- {obj['description']}" for obj in objectives]
+        [f"- {obj['id']}: {obj['description']}" for obj in objectives]
     )
 
     student_context = f"""
@@ -32,8 +32,8 @@ async def analyze(
     Here is the raw session log from an educator:
     {raw_text}
 
-    Please generate a summary of the session and estimate the progress made across the objectives above. 
-    Return only a JSON with keys: "summary" (string) and "progress_delta" (integer between -100 and 100 denoting percentage progress towards final objective).
+    For each objective listed above, please generate a respective summary of the session and estimate the progress made towards the respective objective. 
+    Return only a list of JSON objects with keys: "objective_id" (string), "summary" (string), and "progress_delta" (integer between -100 and 100 denoting percentage progress towards final objective).
     """
 
     # Call your LLM

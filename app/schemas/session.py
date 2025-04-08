@@ -17,7 +17,6 @@ class Session(BaseModel):
     updated_at: Optional[datetime] = None
 
 class SessionCreate(BaseModel):
-    teacher_id: str
     student_id: str
     objective_id: str
     raw_input: str
