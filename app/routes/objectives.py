@@ -57,6 +57,21 @@ def create_objective(obj: CreateObjective, context=Depends(user_supabase_client)
     response = supabase.table("objectives").insert(obj_dict).execute()
     return response.data
 
+@router.get("/student/{student_id}")
+def get_all_objectives(student_id: str, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+    
+    response = supabase \
+        .table("objectives") \
+        .select("*") \
+        .eq("teacher_id", user_id) \
+        .eq("student_id", student_id) \
+        .order("updated_at", desc=True) \
+        .execute()
+
+    return response.data
+
 @router.put("/objective/{id}")
 def update_objective(id: str, obj: Objective, context=Depends(user_supabase_client)):
     supabase = context["supabase"]

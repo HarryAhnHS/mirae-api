@@ -15,3 +15,11 @@ class Session(BaseModel):
     date: Optional[datetime] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+class SessionCreate(BaseModel):
+    teacher_id: str
+    student_id: str
+    objective_id: str
+    raw_input: str
+    llm_summary: Optional[str] = None
+    progress_delta: int
