@@ -4,7 +4,7 @@ from app.dependencies.auth import user_supabase_client
 
 router = APIRouter()
 
-@router.post("/")
+@router.post("/student")
 def create_student(student: StudentCreate, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
@@ -19,7 +19,7 @@ def create_student(student: StudentCreate, context=Depends(user_supabase_client)
     
     return response.data
 
-@router.get("/")
+@router.get("/students")
 def get_all_students(context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
@@ -34,13 +34,13 @@ def get_all_students(context=Depends(user_supabase_client)):
     print("response:", response)
     return response.data
 
-@router.put("/{student_id}")
+@router.put("/student/{student_id}")
 def update_student(student_id: str, student: Student, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     result = supabase.table("students").update(student.model_dump()).eq("id", student_id).execute()
     return result.data
 
-@router.delete("/{student_id}")
+@router.delete("/student/{student_id}")
 def delete_student(student_id: str, context=Depends(user_supabase_client)   ):
     supabase = context["supabase"]
     result = supabase.table("students").delete().eq("id", student_id).execute()

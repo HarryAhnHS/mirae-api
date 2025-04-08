@@ -67,7 +67,7 @@ def log(
     return {"status": "success", "session_id": new_session["id"]}
 
 # -------- Get All Sessions from logged in user --------
-@router.get("/")
+@router.get("/sessions")
 async def get_all_sessions(context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
