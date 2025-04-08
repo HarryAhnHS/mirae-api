@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.objective import Objective, SubjectArea
+from app.schemas.objective import Objective, SubjectArea, CreateSubjectArea
 from app.dependencies.auth import user_supabase_client
 
 router = APIRouter()
@@ -7,7 +7,7 @@ router = APIRouter()
 # -------- Subject Areas --------
 
 @router.post("/subject-area")
-def create_subject_area(subject: SubjectArea, context=Depends(user_supabase_client)):
+def create_subject_area(subject: CreateSubjectArea, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
     

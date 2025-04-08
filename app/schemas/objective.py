@@ -10,14 +10,28 @@ class SubjectArea(BaseModel):
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
+class CreateSubjectArea(BaseModel):
+    name: str
+
+
 # --- Objectives ---
 class Objective(BaseModel):
     id: Optional[str] = None
     student_id: str
     teacher_id: str
+    subject_area_id: str
     description: str
     progress_type: Optional[str] = "general"
     current_progress: Optional[int] = 0
     weekly_frequency: Optional[int] = None
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
+
+class CreateObjective(BaseModel):
+    student_id: str
+    subject_area_id: str
+    description: str
+    progress_type: Optional[str] = "general"
+    current_progress: Optional[int] = 0
+    weekly_frequency: Optional[int] = None
+
