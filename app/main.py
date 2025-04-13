@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import students, objectives, sessions
+from app.routes import students, objectives, sessions, goals
 from dotenv import load_dotenv
 import os
 
@@ -17,5 +17,6 @@ app.add_middleware(
 )
 
 app.include_router(students.router, prefix="/students")
+app.include_router(goals.router, prefix="/goals")
 app.include_router(objectives.router, prefix="/objectives")
 app.include_router(sessions.router, prefix="/sessions")

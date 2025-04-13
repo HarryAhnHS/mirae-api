@@ -50,10 +50,13 @@ def create_objective(obj: CreateObjective, context=Depends(user_supabase_client)
     supabase = context["supabase"]
     user_id = context["user_id"]
     
-    # Override teacher_id from context
     obj_dict = obj.model_dump()
     obj_dict["teacher_id"] = user_id
     
+    # Convert UUID fields to strings
+    obj_dict["goal_id"] = str(obj_dict["goal_id"])
+    obj_dict["subject_area_id"] = str(obj_dict["subject_area_id"])
+
     response = supabase.table("objectives").insert(obj_dict).execute()
     return response.data
 
@@ -69,13 +72,26 @@ def get_all_objectives(student_id: str, context=Depends(user_supabase_client)):
         .eq("student_id", student_id) \
         .order("updated_at", desc=True) \
         .execute()
-
     return response.data
 
-@router.put("/objective/{id}")
-def update_objective(id: str, obj: Objective, context=Depends(user_supabase_client)):
+@router.get("/objective/{id}")
+def get_objective(id: str, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
-    return supabase.table("objectives").update(obj.model_dump()).eq("id", id).execute().data
+    return supabase.table("objectives").select("*").eq("id", id).execute().data
+
+@router.put("/objective/{id}")
+def update_objective(id: str, obj: CreateObjective, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    obj_dict = obj.model_dump()
+    obj_dict["teacher_id"] = user_id
+
+    # Convert UUID fields to strings
+    obj_dict["goal_id"] = str(obj_dict["goal_id"])
+    obj_dict["subject_area_id"] = str(obj_dict["subject_area_id"])
+
+    return supabase.table("objectives").update(obj_dict).eq("id", id).execute().data
 
 @router.delete("/objective/{id}")
 def delete_objective(id: str, context=Depends(user_supabase_client)):
