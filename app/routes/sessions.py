@@ -41,6 +41,7 @@ async def analyze(
 
     return summary_data
 
+# -------- Create session --------
 @router.post("/log")
 def log(
     session: SessionCreate,
@@ -91,3 +92,55 @@ async def get_all_sessions(context=Depends(user_supabase_client)):
         .execute()
 
     return response.data
+
+# -------- Get session by id --------
+@router.get("/sessions/{session_id}")
+def get_session_by_id(session_id: str, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+
+    response = supabase.table("sessions").select("""
+        *,
+            student:students (
+                id, name, grade_level, disability_type
+            ),
+            objective:objectives (
+                id, description, current_progress, weekly_frequency,
+                subject_area:subject_areas (
+                    id, name
+                )
+            )
+        """).eq("id", session_id).execute()
+    return response.data
+
+# -------- Edit session --------
+@router.put("/sessions/{session_id}")
+def edit_session(session_id: str, session: SessionCreate, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    response = supabase.table("sessions").update(session.model_dump()).eq("id", session_id).execute()
+    return response.data
+
+
+@router.get("/sessions/student/{student_id}")
+def get_sessions_by_student(student_id: str, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+    return supabase \
+        .table("sessions") \
+        .select("*") \
+        .eq("teacher_id", user_id) \
+        .eq("student_id", student_id) \
+        .order("created_at", desc=True) \
+        .execute().data
+
+@router.get("/sessions/objective/{objective_id}")
+def get_sessions_by_objective(objective_id: str, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+    return supabase \
+        .table("sessions") \
+        .select("*") \
+        .eq("teacher_id", user_id) \
+        .eq("objective_id", objective_id) \
+        .order("created_at", desc=True) \
+        .execute().data
+

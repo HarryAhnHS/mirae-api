@@ -1,18 +1,7 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, Field, RootModel
+from uuid import UUID
+from typing import Optional, List
 from datetime import datetime
-
-# --- Subject Areas ---
-class SubjectArea(BaseModel):
-    id: Optional[str] = None
-    name: str
-    teacher_id: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-class CreateSubjectArea(BaseModel):
-    name: str
-
 
 # --- Objectives ---
 class Objective(BaseModel):
@@ -29,6 +18,12 @@ class Objective(BaseModel):
 
 class CreateObjective(BaseModel):
     student_id: str
-    subject_area_id: str
-    description: str
+    goal_id: UUID
+    subject_area_id: UUID
+    description: str = Field(..., description="Full IEP-style description")
+    objective_type: str = Field(..., description="Either 'binary' or 'trial'")
+    target_accuracy: float = Field(..., ge=0.0, le=1.0, description="Required accuracy threshold (0.0 - 1.0)")
+    target_consistency_trials: int = Field(..., gt=0, description="Minimum number of successful trials")
+    target_consistency_successes: int = Field(..., gt=0, description="Successes required for consistency")
+
 
