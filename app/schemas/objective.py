@@ -1,19 +1,7 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 from uuid import UUID
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
-
-# --- Subject Areas ---
-class SubjectArea(BaseModel):
-    id: Optional[str] = None
-    name: str
-    teacher_id: str
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
-
-class CreateSubjectArea(BaseModel):
-    name: str
-
 
 # --- Objectives ---
 class Objective(BaseModel):

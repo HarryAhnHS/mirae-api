@@ -12,6 +12,7 @@ def create_goal(goal: CreateGoal, context=Depends(user_supabase_client)):
     goal_data["teacher_id"] = user_id
     return supabase.table("goals").insert(goal_data).execute().data
 
+# Get goals for a single student and single subject area
 @router.get("/student/{student_id}/subject-area/{subject_area_id}")
 def get_goals_for_student_and_subject_area(subject_area_id: str, student_id: str, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
@@ -26,6 +27,8 @@ def get_goals_for_student_and_subject_area(subject_area_id: str, student_id: str
         .order("updated_at", desc=True) \
         .execute()
     return response.data
+
+
 
 @router.get("/goal/{goal_id}")
 def get_goal(goal_id: str, context=Depends(user_supabase_client)):
