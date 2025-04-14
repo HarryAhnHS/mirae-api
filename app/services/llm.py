@@ -1,10 +1,16 @@
 import json
 import os
-
 from typing import Dict, Any
 from google import genai
+from dotenv import load_dotenv
+
+# Load environment variables
+load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+if not GEMINI_API_KEY:
+    raise ValueError("GEMINI_API_KEY environment variable is not set")
+
 GEMINI_MODEL_NAME = "gemini-2.0-flash"
 
 # Configure Gemini client
