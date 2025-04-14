@@ -5,6 +5,13 @@ from datetime import datetime, timezone
 from typing import List, Dict
 from app.schemas.session import SessionsWithProgressCreate, SessionCreate
 import uuid
+from app.services.transcript_analyzer import (
+    FinalSessionLogs,
+    FinalSessionLog,
+    ParsedSession,
+    call_llm_extract_sessions,
+    resolve_ids,
+)
 
 router = APIRouter()
 
@@ -130,7 +137,6 @@ def edit_session_and_progress(
     
     # Update the associated objective_progress record
     updated_progress = supabase.table("objective_progress").update({
-        "is_success": payload["objective_progress"]["is_success"],
         "trials_completed": payload["objective_progress"]["trials_completed"],
         "trials_total": payload["objective_progress"]["trials_total"]
     }).eq("id", objective_progress_id).execute()
@@ -258,3 +264,41 @@ def log_session_and_progress(
         "status": "success",
         "session_ids": session_ids
     }
+
+# Analyze transcript to predict session and progress
+@router.post("/analyze-transcript", response_model=FinalSessionLogs)
+async def auto_log_session_and_progress(
+    transcript: str = Body(..., embed=True),
+    context=Depends(user_supabase_client)
+):
+    supabase = context["supabase"]
+    teacher_id = context["user_id"]
+
+    try:
+        # 1. Call LLM to extract session logs
+        parsed_sessions = call_llm_extract_sessions(transcript)  # Swap with actual LLM call later
+
+        session_logs = []
+
+        for item in parsed_sessions:
+            # Add raw_input if not included in LLM response
+            item["raw_input"] = transcript
+
+            parsed = ParsedSession(**item)
+            student_id, objective_id = await resolve_ids(
+                supabase, teacher_id, parsed.student_name, parsed.objective_title
+            )
+            session_logs.append(
+                FinalSessionLog(
+                    student_id=student_id,
+                    objective_id=objective_id,
+                    raw_input=parsed.raw_input,
+                    memo=parsed.memo,
+                    objective_progress=parsed.objective_progress
+                )
+            )
+
+        return FinalSessionLogs(sessions=session_logs)
+
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Transcript analysis failed: {str(e)}")
