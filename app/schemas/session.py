@@ -1,24 +1,26 @@
-from pydantic import BaseModel
-from typing import Optional
+from pydantic import BaseModel, RootModel
+from typing import Optional, List
 from datetime import datetime
 
 # --- Sessions ---
-class Session(BaseModel):
-    id: Optional[str] = None
-    teacher_id: str
-    student_id: str
-    objective_id: str
-    raw_input: str
-    llm_summary: str
-    progress_delta: int
-    notes: Optional[str] = None
-    date: Optional[datetime] = None
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
 class SessionCreate(BaseModel):
     student_id: str
     objective_id: str
-    raw_input: str
-    llm_summary: Optional[str] = None
-    progress_delta: int
+    objective_progress_id: str
+    memo: Optional[str] = None
+
+# --- Sessions with Progress ---
+class ObjectiveProgressCreate(BaseModel):
+    trials_completed: int
+    trials_total: int
+
+class SessionWithProgressCreate(BaseModel):
+    student_id: str
+    objective_id: str
+    memo: Optional[str] = None
+    created_at: Optional[str] = None
+    objective_progress: ObjectiveProgressCreate
+
+class SessionsWithProgressCreate(RootModel):
+    root: List[SessionWithProgressCreate]

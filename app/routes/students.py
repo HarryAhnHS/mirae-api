@@ -60,5 +60,12 @@ def update_student(student_id: str, student: StudentCreate, context=Depends(user
 @router.delete("/student/{student_id}")
 def delete_student(student_id: str, context=Depends(user_supabase_client)   ):
     supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    # Verify student belongs to the user
+    existing_student = supabase.table("students").select("*").eq("id", student_id).eq("teacher_id", user_id).execute()
+    if not existing_student.data:
+        raise HTTPException(status_code=404, detail="Student not found")    
+    
     response = supabase.table("students").delete().eq("id", student_id).execute()
     return response.data
