@@ -12,7 +12,20 @@ def get_all_students(context=Depends(user_supabase_client)):
 
     response = supabase \
         .table("students") \
-        .select("*, objectives(*)") \
+        .select("""
+            *,
+            objectives (
+                *,
+                subject_area:subject_areas (
+                    id,
+                    name
+                ),
+                goal:goals (
+                    id,
+                    title
+                )
+            )
+        """) \
         .eq("teacher_id", user_id) \
         .order("updated_at", desc=True) \
         .execute()
