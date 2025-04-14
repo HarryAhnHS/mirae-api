@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.objective import CreateObjective
 from app.dependencies.auth import user_supabase_client
 
@@ -57,5 +57,12 @@ def update_objective(id: str, obj: CreateObjective, context=Depends(user_supabas
 @router.delete("/objective/{id}")
 def delete_objective(id: str, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    # Verify objective belongs to the user
+    existing_objective = supabase.table("objectives").select("*").eq("id", id).eq("teacher_id", user_id).execute()
+    if not existing_objective.data:
+        raise HTTPException(status_code=404, detail="Objective not found")    
+    
     supabase.table("objectives").delete().eq("id", id).execute()
     return {"message": "Deleted"}

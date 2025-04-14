@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from app.schemas.subject_area import SubjectArea, CreateSubjectArea
 from app.dependencies.auth import user_supabase_client
 
@@ -55,5 +55,12 @@ def update_subject_area(id: str, subject: SubjectArea, context=Depends(user_supa
 @router.delete("/subject-area/{id}")
 def delete_subject_area(id: str, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    # Verify subject area belongs to the user
+    existing_subject_area = supabase.table("subject_areas").select("*").eq("id", id).eq("teacher_id", user_id).execute()
+    if not existing_subject_area.data:
+        raise HTTPException(status_code=404, detail="Subject area not found")
+    
     supabase.table("subject_areas").delete().eq("id", id).execute()
     return {"message": "Deleted"}
