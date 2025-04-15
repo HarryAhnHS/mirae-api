@@ -24,7 +24,7 @@ def get_all_subject_areas(context=Depends(user_supabase_client)):
     
     response = supabase \
         .table("subject_areas") \
-        .select("*, student:students(*), objective:objectives(*, goal:goals(*))") \
+        .select("*, objective:objectives(*, student:students(*),  goal:goals(*))") \
         .eq("teacher_id", user_id) \
         .order("updated_at", desc=True) \
         .execute()
