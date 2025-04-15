@@ -26,8 +26,6 @@ def top_k_semantic_matches(
         return []
     
     print("top_k_semantic_matches called");
-    print("candidates: ", candidates)
-    print("key: ", key)
 
     texts = [c[key] for c in candidates]
     print("Encoding texts: ", texts)
@@ -39,7 +37,6 @@ def top_k_semantic_matches(
 
     results = []
     for i, score in enumerate(scores):
-        print("semantic matcher score: ", score, "for query: ", query, "and candidate: ", candidates[i][key])
         if score >= threshold:
             match = {
                 "id": str(candidates[i][id_key]),
@@ -55,7 +52,5 @@ def top_k_semantic_matches(
 
     # sort by similarity descending
     results.sort(key=lambda x: x["similarity"], reverse=True)
-
-    print("semantic matcher results: ", results[:top_k], "for query: ", query)
 
     return results[:top_k]
