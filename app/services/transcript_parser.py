@@ -11,20 +11,8 @@ load_dotenv()
 
 
 # ---------- Pydantic Models ----------
-class Goal(BaseModel):
-    id: str
-    title: str
-
-class SubjectArea(BaseModel):
-    id: str
-    name: str
-
 class TranscriptRequest(BaseModel):
     transcript: str
-
-class ObjectiveProgress(BaseModel):
-    trials_completed: int
-    trials_total: int
 
 class ParsedSession(BaseModel):
     student_name: str
@@ -35,19 +23,41 @@ class MatchStudent(BaseModel):
     id: str
     name: str
     similarity: float
-
+    summary: str
+    disability_type: str
+    grade_level: int
+class SubjectArea(BaseModel):
+    id: str
+    name: str
+class Goal(BaseModel):
+    id: str
+    title: str
 class MatchObjective(BaseModel):
     id: str
     description: str
     similarity: float
     queried_objective_description: str
+    objective_type: str
+    target_accuracy: float
+    subject_area: SubjectArea
+    goal: Goal
 
+class StudentWithObjectives(BaseModel):
+    student: MatchStudent
+    objectives: List[MatchObjective]
+
+class ObjectiveProgress(BaseModel):
+    trials_completed: int
+    trials_total: int
 class SuggestedSession(BaseModel):
+    parsed_session_id: str
     raw_input: str
     memo: str
     objective_progress: ObjectiveProgress
-    student_suggestions: List[MatchStudent]
-    objective_suggestions: List[MatchObjective]
+    # student_suggestions: List[MatchStudent]
+    # objective_suggestions: List[MatchObjective]
+    matches: List[StudentWithObjectives]
+
 
 client = Together(api_key=os.getenv("TOGETHER_API_KEY")) # auth defaults to env TOGETHER_API_KEY
 model = os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free")
@@ -113,32 +123,51 @@ def call_llm_extract_sessions(transcript: str) -> List[dict]:
 
 def infer_trials_completed(
     transcript: str, 
+    parsed_memo: str,
+    student_name: str,
+    student_disability_type: str,
+    student_grade_level: int,
+    student_summary: str,
     objective_description: str,
-    objective_student_name: str,
     objective_type: str, 
     target_accuracy: float
 ) -> dict:
     system_prompt = (
         "You are an assistant that extracts objective progress data from session logs for IEP tracking.\n"
-        "You will be given the session transcript, objective details, and type information.\n"
-        "Respond ONLY with JSON of the following format:\n"
+        "Each session is a single activity or observation of a student.\n"
+        "You will be given:\n"
+        "- The raw transcript from the teacher\n"
+        "- A summary of that session\n"
+        "- Student metadata (name, grade, disability, profile summary)\n"
+        "- Objective metadata (description, type, and target accuracy if applicable)\n"
+        "\n"
+        "Respond ONLY with JSON like this:\n"
         "{\n"
         "  \"trials_completed\": <int>,\n"
         "  \"trials_total\": <int>\n"
         "}\n"
-        "If objective_type is 'binary', set trials_completed and trials_total to 1 if the goal was met, otherwise 0.\n"
-        "If objective_type is 'trial', try to infer the numerator and denominator from score references like percentages (e.g., 'scored 50%' = 50/100). If you can't infer the numerator and denominator, default to 100 as trials_total and infer trials_completed based on the transcript and target_accuracy."
+        "\n"
+        "If objective_type is 'binary', return 1/1 if the student clearly met the goal, or 0/1 if not.\n"
+        "If objective_type is 'trial', infer numerator/denominator from test scores, percentages, or activity/observation performance metric.\n"
+        "For example, 'scored 50%' = 50/100 or '12 out of 15 correct' = 12/15."
     )
 
     user_prompt = f"""
-        Student: {objective_student_name}
-        Objective: {objective_description}
-        Objective Type: {objective_type}
-        Target Accuracy: {target_accuracy}
+        Student Name: {student_name}
+        Student Grade Level: {student_grade_level}
+        Disability Type: {student_disability_type}
+        Student Summary: {student_summary}
 
-        Transcript:
+        Objective Description: {objective_description}
+        Objective Type: {objective_type}
+        {f"Target Accuracy: {target_accuracy * 100:.0f}%" if objective_type == "trial" else ""}
+
+        Parsed Session Memo:
+        {parsed_memo}
+
+        Full Raw Transcript:
         \"\"\"{transcript}\"\"\"
-    """
+            """
 
     try:
         response = client.chat.completions.create(

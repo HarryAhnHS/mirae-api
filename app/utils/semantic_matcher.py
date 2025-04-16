@@ -26,9 +26,8 @@ def top_k_semantic_matches(
         return []
     
     print("top_k_semantic_matches called");
-
     texts = [c[key] for c in candidates]
-    print("Encoding texts: ", texts)
+    print(f"Encoding {len(texts)} texts for {key}")
     print("Encoding query: ", query)
     candidate_embeddings = model.encode(texts, convert_to_tensor=True)
     query_embedding = model.encode(query, convert_to_tensor=True)
