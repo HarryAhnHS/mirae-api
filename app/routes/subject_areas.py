@@ -36,15 +36,15 @@ def get_all_subject_areas(context=Depends(user_supabase_client)):
 def get_subject_areas_by_student(student_id: str, context=Depends(user_supabase_client)):
     supabase = context["supabase"]
     user_id = context["user_id"]
-    
+
     response = supabase \
         .table("subject_areas") \
-        .select("*, objective:objectives(*, student:students(*), goal:goals(*))") \
+        .select("*, objective:objectives!inner(*, student:students(*), goal:goals(*))") \
         .eq("teacher_id", user_id) \
         .eq("objectives.student_id", student_id) \
         .order("updated_at", desc=True) \
         .execute()
-    
+
     return response.data
 
 @router.put("/subject-area/{id}")
