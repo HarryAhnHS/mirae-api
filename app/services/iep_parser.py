@@ -1,12 +1,13 @@
 import os
 import json
 from pathlib import Path
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field, ValidationError
 from openai import OpenAI
 import pdfplumber
 from tempfile import NamedTemporaryFile
 import logging
+from app.services.objective_parser import parse_objective
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -14,6 +15,14 @@ logger = logging.getLogger(__name__)
 
 class Objective(BaseModel):
     description: str = Field(..., description="Verbatim text for the objective.")
+    objective_type: Optional[str] = Field(None, description="Type of objective (trials, binary, rubric, continuous)")
+    target_accuracy: Optional[float] = Field(None, description="Target accuracy percentage as decimal (e.g., 80.0)")
+    target_consistency_trials: Optional[int] = Field(None, description="Total number of trials for consistency measurement")
+    target_consistency_successes: Optional[int] = Field(None, description="Target number of successful trials")
+    reporting_frequency: Optional[str] = Field(None, description="How often progress is reported")
+    
+    class Config:
+        extra = "ignore"  # Ignore extra fields that aren't in the model
 
 class AnnualGoal(BaseModel):
     goal_description: str = Field(
@@ -48,53 +57,92 @@ class IEP(BaseModel):
         extra = "allow"
 
 def clean_model_output(candidate: dict) -> dict:
-    cleaned = dict(candidate)
+    """
+    Clean and process the data from the LLM to ensure it meets expected format.
+    More lenient with missing data to prevent validation errors.
+    """
+    try:
+        cleaned = dict(candidate)
 
-    for fld in ["student_name", "disability_type", "grade_level"]:
-        if fld not in cleaned or not isinstance(cleaned[fld], str):
-            cleaned[fld] = "Unknown"
+        # Ensure required string fields exist
+        for fld in ["student_name", "disability_type", "grade_level"]:
+            if fld not in cleaned or not isinstance(cleaned[fld], str):
+                cleaned[fld] = "Unknown"
 
-    if "areas_of_need" not in cleaned or not isinstance(cleaned["areas_of_need"], list):
-        cleaned["areas_of_need"] = []
-    
-    for i, area in enumerate(cleaned["areas_of_need"]):
-        if not isinstance(area, dict):
-            cleaned["areas_of_need"][i] = {
-                "area_name": "No area of need detected",
-                "goals": []
-            }
-            continue
+        # Ensure areas_of_need is a list
+        if "areas_of_need" not in cleaned or not isinstance(cleaned["areas_of_need"], list):
+            cleaned["areas_of_need"] = []
         
-        if "area_name" not in area or not isinstance(area["area_name"], str):
-            area["area_name"] = "No area of need detected"
-        if "goals" not in area or not isinstance(area["goals"], list):
-            area["goals"] = []
-
-        for j, goal in enumerate(area["goals"]):
-            if not isinstance(goal, dict):
-                area["goals"][j] = {
-                    "goal_description": "No goal detected",
-                    "objectives": []
+        # Process each area of need
+        for i, area in enumerate(cleaned["areas_of_need"]):
+            # Ensure area is a dict
+            if not isinstance(area, dict):
+                cleaned["areas_of_need"][i] = {
+                    "area_name": "Unknown",
+                    "goals": []
                 }
                 continue
             
-            if "goal_description" not in goal or not isinstance(goal["goal_description"], str):
-                goal["goal_description"] = "No goal detected"
-            if "objectives" not in goal or not isinstance(goal["objectives"], list):
-                goal["objectives"] = []
+            # Ensure area_name is a string
+            if "area_name" not in area or not isinstance(area["area_name"], str):
+                area["area_name"] = "Unknown"
+            
+            # Ensure goals is a list
+            if "goals" not in area or not isinstance(area["goals"], list):
+                area["goals"] = []
 
-            for k, obj in enumerate(goal["objectives"]):
-                if not isinstance(obj, dict):
-                    goal["objectives"][k] = {"description": "Unknown"}
+            # Process each goal
+            for j, goal in enumerate(area["goals"]):
+                # Ensure goal is a dict
+                if not isinstance(goal, dict):
+                    area["goals"][j] = {
+                        "goal_description": "Unknown",
+                        "objectives": []
+                    }
                     continue
+                
+                # Ensure goal_description is a string
+                if "goal_description" not in goal or not isinstance(goal["goal_description"], str):
+                    goal["goal_description"] = "Unknown"
+                
+                # Ensure objectives is a list
+                if "objectives" not in goal or not isinstance(goal["objectives"], list):
+                    goal["objectives"] = []
 
-                desc = obj.get("description", "Unknown")
-                if not isinstance(desc, str):
-                    desc = "Unknown"
+                # Process each objective
+                for k, obj in enumerate(goal["objectives"]):
+                    # Ensure objective is a dict with at least a description
+                    if not isinstance(obj, dict):
+                        goal["objectives"][k] = {"description": "Unknown"}
+                        continue
+                    
+                    # Ensure description exists and is a string
+                    if "description" not in obj or not isinstance(obj["description"], str):
+                        obj["description"] = "Unknown"
+                    
+                    # Parse the objective to extract additional fields
+                    if obj["description"] != "Unknown":
+                        try:
+                            parsed_objective = parse_objective(obj["description"])
+                            goal["objectives"][k] = parsed_objective
+                        except Exception as e:
+                            logger.warning(f"Error parsing objective: {str(e)}")
+                            # If parsing fails, keep at least the description
+                            goal["objectives"][k] = {"description": obj["description"]}
+                    else:
+                        goal["objectives"][k] = {"description": "Unknown"}
 
-                goal["objectives"][k] = {"description": desc}
-
-    return cleaned
+        return cleaned
+    except Exception as e:
+        # If anything fails in cleaning, log it and return the original data
+        # with minimal required fields to prevent validation errors
+        logger.error(f"Error in clean_model_output: {str(e)}")
+        return {
+            "student_name": "Unknown",
+            "disability_type": "Unknown",
+            "grade_level": "Unknown",
+            "areas_of_need": []
+        }
 
 class IEPParser:
     def __init__(self):
