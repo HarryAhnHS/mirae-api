@@ -102,6 +102,14 @@ async def get_all_sessions(context=Depends(user_supabase_client)):
 
     return response.data
 
+@router.get("/recent")
+async def get_recent_sessions(context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    response = supabase.table("sessions").select("*").eq("teacher_id", user_id).order("created_at", desc=True).limit(10).execute()
+    return response.data
+
 # -------- Edit session --------
 @router.put("/{session_id}")
 def edit_session_and_progress(
