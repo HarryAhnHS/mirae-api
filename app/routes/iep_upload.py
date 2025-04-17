@@ -6,6 +6,11 @@ from app.schemas.student import StudentCreate
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 import uuid
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 security = HTTPBearer()
@@ -44,16 +49,28 @@ async def parse_iep(
         raise HTTPException(status_code=400, detail="File must be a PDF")
     
     try:
+        logger.info(f"Received file {file.filename} for parsing")
+        
         # Read the PDF file
         pdf_bytes = await file.read()
+        logger.info(f"Read {len(pdf_bytes)} bytes from uploaded PDF")
         
         # Parse the IEP
-        parser = IEPParser()
-        iep_data = await parser.parse_iep_from_pdf(pdf_bytes)
-        
-        return iep_data
+        try:
+            parser = IEPParser()
+            iep_data = await parser.parse_iep_from_pdf(pdf_bytes)
+            logger.info(f"Successfully parsed IEP for student: {iep_data.student_name}")
+            
+            return iep_data
+        except ValueError as e:
+            logger.error(f"Validation error in IEP parsing: {str(e)}")
+            raise HTTPException(status_code=422, detail=f"Invalid IEP format: {str(e)}")
+        except RuntimeError as e:
+            logger.error(f"Runtime error in IEP parsing: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error processing IEP: {str(e)}")
         
     except Exception as e:
+        logger.error(f"Unexpected error in parse_iep endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/save", 
@@ -70,6 +87,8 @@ async def save_iep(
     Save the parsed IEP data to create student record with associated data.
     """
     try:
+        logger.info(f"Saving IEP data for student: {iep_data.student_name}")
+        
         # Get Supabase client and user ID
         supabase = context["supabase"]
         user_id = context["user_id"]
@@ -95,9 +114,11 @@ async def save_iep(
         
         student_response = supabase.table("students").insert(student_data).execute()
         if not student_response.data:
+            logger.error("Failed to create student record")
             raise HTTPException(status_code=500, detail="Failed to create student record")
         
         student_id = student_response.data[0]["id"]
+        logger.info(f"Created student record with ID: {student_id}")
         
         # Create subject areas, goals, and objectives
         for area in iep_data.areas_of_need:
@@ -108,6 +129,7 @@ async def save_iep(
             }
             subject_area_response = supabase.table("subject_areas").insert(subject_area_data).execute()
             if not subject_area_response.data:
+                logger.warning(f"Failed to create subject area: {area.area_name}")
                 continue
             
             subject_area_id = subject_area_response.data[0]["id"]
@@ -122,6 +144,7 @@ async def save_iep(
                 }
                 goal_response = supabase.table("goals").insert(goal_data).execute()
                 if not goal_response.data:
+                    logger.warning(f"Failed to create goal for subject area {area.area_name}")
                     continue
                 
                 goal_id = goal_response.data[0]["id"]
@@ -135,8 +158,11 @@ async def save_iep(
                         "subject_area_id": subject_area_id,
                         "description": objective.description
                     }
-                    supabase.table("objectives").insert(objective_data).execute()
+                    objective_response = supabase.table("objectives").insert(objective_data).execute()
+                    if not objective_response.data:
+                        logger.warning(f"Failed to create objective for goal {goal.goal_description}")
         
+        logger.info(f"Successfully saved all IEP data for student: {iep_data.student_name}")
         return {
             "message": "IEP saved successfully",
             "student_id": student_id,
@@ -144,4 +170,5 @@ async def save_iep(
         }
         
     except Exception as e:
+        logger.error(f"Error in save_iep endpoint: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e)) 

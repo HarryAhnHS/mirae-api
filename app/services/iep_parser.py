@@ -6,6 +6,11 @@ from pydantic import BaseModel, Field, ValidationError
 from openai import OpenAI
 import pdfplumber
 from tempfile import NamedTemporaryFile
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 class Objective(BaseModel):
     description: str = Field(..., description="Verbatim text for the objective.")
@@ -92,12 +97,16 @@ def clean_model_output(candidate: dict) -> dict:
     return cleaned
 
 class IEPParser:
-    def __init__(self, model_name: str = "gpt-4-0125-preview"):
+    def __init__(self):
         api_key = os.getenv("OPENAI_API_KEY")
         if not api_key:
             raise ValueError("OPENAI_API_KEY not found in environment variables")
+        
         self.client = OpenAI(api_key=api_key)
-        self.model_name = model_name
+        
+        # Use gpt-4o-mini explicitly
+        self.model_name = "gpt-4o-mini"
+        logger.info(f"Using OpenAI model: {self.model_name}")
 
     def extract_text_from_pdf_bytes(self, pdf_bytes: bytes) -> str:
         """Extract text from PDF bytes."""
@@ -114,6 +123,7 @@ class IEPParser:
                         if page_text:
                             text_chunks.append(page_text)
             except Exception as e:
+                logger.error(f"Error extracting text from PDF: {str(e)}")
                 raise RuntimeError(f"Error extracting text from PDF: {str(e)}")
 
         return "\n".join(text_chunks)
@@ -137,27 +147,38 @@ class IEPParser:
             "- Capture area of need, goals, and objectives exactly as they appear."
         )
 
-        response = self.client.chat.completions.create(
-            model=self.model_name,
-            messages=[
-                {"role": "system", "content": instructions},
-                {"role": "user", "content": f"IEP Text:\n{text}"}
-            ],
-            temperature=0.3
-        )
-
-        return response.choices[0].message.content.strip()
+        try:
+            response = self.client.chat.completions.create(
+                model=self.model_name,
+                messages=[
+                    {"role": "system", "content": instructions},
+                    {"role": "user", "content": f"IEP Text:\n{text}"}
+                ],
+                temperature=0.3
+            )
+            return response.choices[0].message.content.strip()
+        except Exception as e:
+            logger.error(f"Error calling OpenAI API: {str(e)}")
+            raise RuntimeError(f"Error calling OpenAI API: {str(e)}")
 
     async def parse_iep_from_pdf(self, pdf_bytes: bytes) -> IEP:
         """Parse IEP data from PDF bytes."""
-        text = self.extract_text_from_pdf_bytes(pdf_bytes)
-        raw_response = self.get_raw_response(text)
-        
         try:
-            parsed_json = json.loads(raw_response)
-        except json.JSONDecodeError as e:
-            raise ValidationError(f"Invalid JSON returned from model") from e
+            text = self.extract_text_from_pdf_bytes(pdf_bytes)
+            logger.info(f"Extracted {len(text)} characters from PDF")
+            
+            raw_response = self.get_raw_response(text)
+            logger.info("Received response from OpenAI")
+            
+            try:
+                parsed_json = json.loads(raw_response)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid JSON returned from model: {raw_response[:100]}...")
+                raise ValueError(f"Invalid JSON returned from model: {str(e)}")
 
-        cleaned_data = clean_model_output(parsed_json)
-        iep_obj = IEP(**cleaned_data)
-        return iep_obj 
+            cleaned_data = clean_model_output(parsed_json)
+            iep_obj = IEP(**cleaned_data)
+            return iep_obj
+        except Exception as e:
+            logger.error(f"Error parsing IEP: {str(e)}")
+            raise 
