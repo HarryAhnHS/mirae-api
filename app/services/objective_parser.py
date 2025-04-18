@@ -107,7 +107,7 @@ def determine_objective_type(description: str) -> str:
         description: The objective text to parse
         
     Returns:
-        Objective type: "trials", "binary", "rubric", "continuous", or default "trials"
+        Objective type: "trial", "binary", "rubric", "continuous", or default "trial"
     """
     desc_lower = description.lower()
     
