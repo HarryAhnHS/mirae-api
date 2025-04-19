@@ -43,7 +43,7 @@ def extract_accuracy(description: str) -> Optional[float]:
         description: The objective text to parse
         
     Returns:
-        A float with the percentage (e.g., 80.0), or None if not found
+        A float with the percentage (e.g., 80.0), or None if not found. Percentage should never be greater than 100 or less than 0.
     """
     # Match patterns like "80% mastery", "with 75% accuracy", "at 90%"
     accuracy_patterns = [
@@ -133,14 +133,14 @@ def determine_objective_type(description: str) -> str:
     
     # Check for trials keywords
     if re.search(r'(\d+)\s*(?:\/|out of|of)\s*(\d+)', desc_lower):
-        return "trials"
+        return "trial"
     
     # Check for continuous measurement language
     if re.search(r'(measure|track|record|log|monitor|document)', desc_lower):
         return "continuous"
     
     # Default if nothing else matches
-    return "trials"  # Most common type as default
+    return "trial"  # Most common type as default
 
 def parse_objective(description: str) -> Dict[str, Any]:
     """
