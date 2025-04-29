@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from app.schemas.student import Student, StudentCreate
 from app.dependencies.auth import user_supabase_client
+from app.services.student_summarizer import call_llm_student_summary
 
 router = APIRouter()
 

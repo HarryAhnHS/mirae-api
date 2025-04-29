@@ -5,77 +5,8 @@ from datetime import datetime, timezone
 from typing import List, Dict
 from app.schemas.session import SessionsWithProgressCreate, SessionCreate
 import uuid
-
+from app.services.student_summarizer import generate_and_store_student_summary
 router = APIRouter()
-
-# -------- Summarize + Log Endpoint --------
-
-# @router.post("/analyze")
-# async def analyze(
-#     raw_text: str = Body(...),
-#     student: Dict = Body(...),
-#     objectives: List[Dict] = Body(...),
-# ):
-#     # Build dynamic system prompt
-#     objective_summaries = "\n".join(
-#         [f"- {obj['id']}: {obj['description']}" for obj in objectives]
-#     )
-
-#     student_context = f"""
-#     You are analyzing a learning session log for a student named {student['name'].strip().title()}, 
-#     a Grade {student['grade_level']} student with {student.get('disability_type', 'no reported disabilities')}.
-#     The learning objectives for this session include:
-#     {objective_summaries}
-#     """
-
-#     full_prompt = f"""{student_context}
-#     Here is the raw session log from an educator:
-#     {raw_text}
-
-#     For each objective listed above, please generate a respective summary of the session and estimate the progress made towards the respective objective. 
-#     Return only a list of JSON objects with keys: "objective_id" (string), "summary" (string), and "progress_delta" (integer between -100 and 100 denoting percentage progress towards final objective).
-#     """
-
-#     # Call your LLM
-#     summary_data = await analyze_session(full_prompt)
-
-#     return summary_data
-
-# -------- Create session --------
-# @router.post("/log")
-# def log(
-#     sessions: SessionsWithProgressCreate,
-#     context=Depends(user_supabase_client)
-# ):
-#     supabase = context["supabase"]
-    
-#     # Process each session in the array
-#     for session_data in sessions.sessions:
-#         # Create session record
-#         session_result = supabase.table("sessions").insert({
-#             "id": str(uuid.uuid4()),
-#             "student_id": session_data.student_id,
-#             "educator_id": session_data.educator_id,
-#             "date": session_data.date,
-#             "duration_minutes": session_data.duration_minutes,
-#             "notes": session_data.notes,
-#             "created_at": datetime.now(timezone.utc).isoformat()
-#         }).execute()
-        
-#         session_id = session_result.data[0]["id"]
-        
-#         # Create progress records for each objective
-#         for progress in session_data.progress:
-#             supabase.table("session_progress").insert({
-#                 "id": str(uuid.uuid4()),
-#                 "session_id": session_id,
-#                 "objective_id": progress.objective_id,
-#                 "progress_delta": progress.progress_delta,
-#                 "summary": progress.summary,
-#                 "created_at": datetime.now(timezone.utc).isoformat()
-#             }).execute()
-    
-#     return {"message": "Sessions logged successfully"}
 
 # -------- Get All Sessions from logged in user --------
 @router.get("/sessions")
@@ -141,6 +72,9 @@ def edit_session_and_progress(
         "trials_completed": payload["objective_progress"]["trials_completed"],
         "trials_total": payload["objective_progress"]["trials_total"]
     }).eq("id", objective_progress_id).execute()
+
+    summary = generate_and_store_student_summary(supabase, payload["student_id"], user_id)
+    print(f"onEdit: ✅ Successfully generated and stored student summary: {summary}")
     
     return {
         "session": updated_session.data[0],
@@ -163,6 +97,9 @@ def delete_session(
     
     # Delete the session
     supabase.table("sessions").delete().eq("id", session_id).execute()
+
+    summary = generate_and_store_student_summary(supabase, existing_session.data[0]["student_id"], user_id)
+    print(f"onDelete: ✅ Successfully updated student summary: {summary}")
     
     return {"message": "Session deleted successfully"}
 
@@ -260,6 +197,9 @@ def log_session_and_progress(
 
         supabase.table("sessions").insert(session_payload).execute()
         session_ids.append(session_id)
+
+        summary = generate_and_store_student_summary(supabase, session.student_id, user_id)
+        print(f"onLog: ✅ Successfully generated and stored student summary: {summary}")
 
     return {
         "status": "success",
