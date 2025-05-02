@@ -27,19 +27,22 @@ async def analyze_transcript_for_sessions(
     transcript = payload.transcript
 
     try:
-        parsed_sessions = call_llm_extract_sessions(transcript)
-        if not parsed_sessions:
-            raise HTTPException(
-                status_code=422,
-                detail="No valid session data found in transcript. Try rephrasing or using manual form."
-            )
-
         students_res = (
             supabase.table("students")
             .select("id, name, grade_level, disability_type, summary")
             .eq("teacher_id", teacher_id)
             .execute()
         ).data or []
+        
+        # Extract student names for the LLM to use
+        student_names = [student["name"] for student in students_res]
+        
+        parsed_sessions = call_llm_extract_sessions(transcript, student_names)
+        if not parsed_sessions:
+            raise HTTPException(
+                status_code=422,
+                detail="No valid session data found in transcript. Try rephrasing or using manual form."
+            )
 
         session_suggestions = []
 
@@ -50,7 +53,7 @@ async def analyze_transcript_for_sessions(
                 print("❌ Failed to parse session:", item)
                 continue
 
-            student_matches = top_k_semantic_matches(parsed.student_name, students_res, key="name", top_k=3)
+            student_matches = top_k_semantic_matches(parsed.student_name, students_res, key="name", top_k=5)
             grouped_matches = []
 
             for student in student_matches:
@@ -73,7 +76,7 @@ async def analyze_transcript_for_sessions(
                     parsed.objective_description,
                     objectives,
                     key="description",
-                    top_k=3
+                    top_k=5
                 )
 
                 # Now we have results from semantic matcher, we create final objects
@@ -85,9 +88,9 @@ async def analyze_transcript_for_sessions(
                     id=student["id"],
                     name=student["name"],
                     similarity=student["similarity"],
-                    summary=full_student.get("summary"),
-                    disability_type=full_student.get("disability_type"),
-                    grade_level=full_student.get("grade_level")
+                    summary=full_student.get("summary") or "",
+                    disability_type=full_student.get("disability_type") or "",
+                    grade_level=full_student.get("grade_level") or 0
                 )
 
                 objectives=[

@@ -19,7 +19,7 @@ def top_k_semantic_matches(
     candidates: List[Dict],
     key: str,
     id_key: str = "id",
-    top_k: int = 3,
+    top_k: int = 5,
     threshold: float = 0
 ) -> List[Dict]:
     if not candidates:

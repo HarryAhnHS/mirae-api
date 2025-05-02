@@ -47,6 +47,14 @@ def get_subject_areas_by_student(student_id: str, context=Depends(user_supabase_
 
     return response.data
 
+@router.get("/subject-area/{id}")
+def get_subject_area(id: str, context=Depends(user_supabase_client)):
+    supabase = context["supabase"]
+    user_id = context["user_id"]
+
+    response = supabase.table("subject_areas").select("*").eq("id", id).eq("teacher_id", user_id).execute()
+    return response.data
+
 @router.put("/subject-area/{id}")
 def update_subject_area(id: str, subject: SubjectArea, context=Depends(user_supabase_client)):
     supabase = context["supabase"]

@@ -63,13 +63,19 @@ client = Together(api_key=os.getenv("TOGETHER_API_KEY")) # auth defaults to env 
 model = os.getenv("TOGETHER_MODEL", "meta-llama/Llama-3.3-70B-Instruct-Turbo-Free")
 
 # ---------- LLM Calls ----------
-def call_llm_extract_sessions(transcript: str) -> List[dict]:
+def call_llm_extract_sessions(transcript: str, student_names: List[str] = None) -> List[dict]:
+    student_names_text = ""
+    if student_names and len(student_names) > 0:
+        student_names_text = "The following are the actual student names in your system. Please use EXACT matches from this list when possible:\n"
+        student_names_text += ", ".join(student_names)
+        student_names_text += "\n\n"
+    
     prompt = f"""
         You are an assistant that extracts structured session logs from a transcript for IEP progress tracking.
         Your job is to split the transcript into individual *sessions*, not by student but by **distinct activities or observations**. Each session should represent a unique event or evaluation for a single student.
         Each session may mention the same student or same objective more than once, but you must create a **separate log per activity or observation**, even if it's for the same student.
 
-        For each session, extract:
+        {student_names_text}For each session, extract:
         - `student_name`: The name of the student the session is about
         - `objective_description`: Describe what the student was working on, in third person
         - `memo`: Summarize their performance or outcome for this specific session, in third person
